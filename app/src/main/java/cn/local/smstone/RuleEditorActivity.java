@@ -78,7 +78,7 @@ public final class RuleEditorActivity extends Activity {
             if (checked && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, 201);
         });
-        Ui.add(forceCard, Ui.text(this, "振动强度以手机硬件支持为限。闪光需要相机权限，相机占用或系统限制时可能不可用。", 12, Ui.MUTED, false), 10);
+        Ui.add(forceCard, Ui.text(this, "请在下方设置中允许“悬浮停止按钮”，亮屏时也能直接停止或打开短信。振动、闪光以硬件和权限为限。", 12, Ui.MUTED, false), 10);
         Ui.add(forceCard, Ui.button(this, "强制提醒权限与后台设置", false, v -> startActivity(new Intent(this, MainActivity.class).putExtra("forceSetup", true))), 16);
         Ui.add(root, forceCard, 16);
         Ui.add(root, Ui.text(this, "底部“保存并试听”会保存本页设置，并执行完整效果：强制提醒最大音量循环，按勾选同步振动与闪光。", 12, Ui.MUTED, false), 16);
@@ -96,13 +96,8 @@ public final class RuleEditorActivity extends Activity {
     }
     private void chooseSystemSound() {
         capture();
-        Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
-            .putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALL)
-            .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-            .putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-            .putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-            .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "选择短信专属提示音")
-            .putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(rule.soundUri));
+        Intent intent = new Intent(this, SystemSoundPickerActivity.class)
+            .putExtra("soundUri", rule.soundUri).putExtra("soundName", rule.soundName);
         try { startActivityForResult(intent, SYSTEM_SOUND); }
         catch (Exception error) { toast("这台手机未提供系统铃声选择器，请从手机选择音频"); }
     }
@@ -121,7 +116,8 @@ public final class RuleEditorActivity extends Activity {
             String previous = rule.soundUri;
             rule.soundUri = uri.toString();
             Ringtone sound = RingtoneManager.getRingtone(this, uri);
-            rule.soundName = sound == null ? "系统铃声" : sound.getTitle(this);
+            rule.soundName = data.getStringExtra("soundName");
+            if (rule.soundName == null) rule.soundName = sound == null ? "系统铃声" : sound.getTitle(this);
             soundLabel.setText(rule.soundName);
             SoundFiles.deleteIfUnused(this, previous);
         } else if (request == FILE_SOUND && data.getData() != null) {

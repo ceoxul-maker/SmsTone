@@ -58,9 +58,19 @@ public final class MainActivity extends Activity {
         if (AlarmService.running) {
             Ui.add(root, Ui.text(this, "正在强制提醒：" + AlarmService.activeTitle, 18, Ui.GREEN, true), 18);
             Ui.add(root, Ui.button(this, "停止全部提醒", true, v -> { stopService(new Intent(this, AlarmService.class)); }), 12);
+            Ui.add(root, Ui.button(this, "停止并打开短信", false, v -> SmsApps.openDefault(this)), 10);
         }
 
         List<Rule> rules = store.all();
+        boolean hasForce = false;
+        for (Rule rule : rules) if (rule.forceAlarm) { hasForce = true; break; }
+        if (hasForce && !Settings.canDrawOverlays(this)) {
+            LinearLayout controls = Ui.card(this);
+            Ui.add(controls, Ui.text(this, "强制提醒：请允许悬浮停止按钮", 16, Ui.INK, true), 0);
+            Ui.add(controls, Ui.text(this, "亮屏时系统可能不弹出提醒页。授权后，响铃时会显示“停止提醒”和“停止并打开短信”；只在强制提醒期间显示。", 13, Ui.MUTED, false), 8);
+            Ui.add(controls, Ui.button(this, "设置悬浮停止按钮", true, v -> requestOverlay()), 12);
+            Ui.add(root, controls, 16);
+        }
         LinearLayout heading = Ui.row(this);
         Ui.weight(heading, Ui.text(this, "号码分组", 19, Ui.INK, true));
         heading.addView(Ui.text(this, rules.size() + " / 6 组", 13, Ui.MUTED, false));
@@ -116,7 +126,7 @@ public final class MainActivity extends Activity {
             String time = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date(store.lastTime()));
             Ui.add(root, Ui.text(this, "最近触发 · " + time + "\n" + store.lastResult(), 12, Ui.MUTED, false), 20);
         }
-        Ui.add(root, Ui.text(this, "0.3.0 测试版 · 无联网权限 · 不保存短信正文", 11, Ui.MUTED, false), 24);
+        Ui.add(root, Ui.text(this, "0.3.1 测试版 · 无联网权限 · 不保存短信正文", 11, Ui.MUTED, false), 24);
     }
     private void edit(String id) {
         Intent intent = new Intent(this, RuleEditorActivity.class);
@@ -148,14 +158,15 @@ public final class MainActivity extends Activity {
     }
     private void showHelp() {
         new AlertDialog.Builder(this).setTitle("让重要短信更容易被听见")
-            .setMessage("你是否也曾因错过或忽略一条重要短信而懊恼？也许是一张本可避免的罚单，也许是某个重要的人留给你的消息。\n\n这款由 AI 编写、源码开放的小工具，帮助你为重要号码设置专属声音，并按需开启强制提醒，让重要短信更容易被注意到。\n\n隐私与短信内容\n工具只用发件号码匹配规则，不提取、展示、保存或上传短信正文，也不读取历史短信。短信内容仍由手机默认短信应用打开。工具没有联网权限，规则与导入音频只保存在本机。\n\n首次使用需要授权\n接收短信和通知权限用于触发提醒及显示停止按钮；列出本地音频需要音频访问权限，可不授权而改用文件浏览；闪光灯需要相机权限。你可在系统设置中随时撤销。\n\n1. 最多 6 组，每组每行一个完整号码，或用逗号分隔；组内外不要重复。\n\n2. 每组分别选择系统铃声或本地音频。音频页默认显示音频库，可按文件类型和本周筛选；不选择时可点“取消”或“返回”，不会改变原声音。\n\n3. 保存后，首页每组的“编辑”和“试听”是两个按钮。编辑页底部“保存并试听”会先保存，再测试整套效果。\n\n4. 强制提醒使用最大闹钟音量循环播放，执行本组勾选的振动和闪光。点“停止试听”或“停止全部提醒”结束，恢复原闹钟音量；普通提醒跟随通知音量和静音设置。\n\n5. 提醒页可点“停止提醒并打开短信”，结束提醒后跳转默认短信应用。手动试听可测试已停用的组，不会改变组开关或总开关。\n\n6. 通用后台设置：在手机设置中搜索“自启动”“应用启动管理”“后台活动”或“电池优化”，允许本工具自启动和后台运行，按需取消电池优化。各品牌及系统版本菜单不同，以手机实际界面为准。锁屏全屏提醒与闪光权限可在“强制提醒权限与后台设置”中检查。\n\n7. 普通静音下可使用闹钟式强制提醒；若勿扰禁止闹钟、系统限制后台或应用被强行停止，仍可能无法提醒。最大振动和闪光取决于硬件、权限与相机占用。原短信应用若支持会话单独静音，可关闭目标会话原声音，避免双响；不要关闭整个短信应用的通知。\n\n仅处理普通 SMS，不处理 RCS、彩信或聊天软件消息。部分受系统保护的验证码可能无法触发。请用真实短信验证后台表现。异常强杀后重新打开工具，可恢复之前记录的闹钟音量。")
+            .setMessage("你是否也曾因错过或忽略一条重要短信而懊恼？也许是一张本可避免的罚单，也许是某个重要的人留给你的消息。\n\n这款由 AI 编写、源码开放的小工具，帮助你为重要号码设置专属声音，并按需开启强制提醒，让重要短信更容易被注意到。\n\n隐私与短信内容\n工具只用发件号码匹配规则，不提取、展示、保存或上传短信正文，也不读取历史短信。短信内容仍由手机默认短信应用打开。工具没有联网权限，规则与导入音频只保存在本机。\n\n首次使用需要授权\n接收短信和通知权限用于触发提醒及显示停止按钮；列出本地音频需要音频访问权限，可不授权而改用文件浏览；闪光灯需要相机权限。你可在系统设置中随时撤销。\n\n1. 最多 6 组，每组每行一个完整号码，或用逗号分隔；组内外不要重复。\n\n2. 每组分别选择系统铃声或本地音频。本地音频页默认显示音频库，可按文件类型和本周筛选；系统铃声页顶部有返回和取消，底部有确定，只有点确定才会应用。取消或返回不改变原声音。\n\n3. 保存后，首页每组的“编辑”和“试听”是两个按钮。编辑页底部“保存并试听”会先保存，再测试整套效果。\n\n4. 强制提醒使用最大闹钟音量循环播放，执行本组勾选的振动和闪光。点“停止试听”或“停止全部提醒”结束，恢复原闹钟音量；普通提醒跟随通知音量和静音设置。\n\n5. 提醒页、展开通知与悬浮控制可停止提醒或打开默认短信应用。请在“强制提醒权限与后台设置”中允许“悬浮停止按钮”，亮屏时也能操作；结束后悬浮按钮会消失。手动试听可测试已停用的组，不会改变组开关或总开关。\n\n6. 通用后台设置：在手机设置中搜索“自启动”“应用启动管理”“后台活动”或“电池优化”，允许本工具自启动和后台运行，按需取消电池优化。各品牌及系统版本菜单不同，以手机实际界面为准。锁屏全屏提醒与闪光权限可在“强制提醒权限与后台设置”中检查。\n\n7. 普通静音下可使用闹钟式强制提醒；若勿扰禁止闹钟、系统限制后台或应用被强行停止，仍可能无法提醒。最大振动和闪光取决于硬件、权限与相机占用。原短信应用若支持会话单独静音，可关闭目标会话原声音，避免双响；不要关闭整个短信应用的通知。\n\n仅处理普通 SMS，不处理 RCS、彩信或聊天软件消息。部分受系统保护的验证码可能无法触发。请用真实短信验证后台表现。异常强杀后重新打开工具，可恢复之前记录的闹钟音量。")
             .setPositiveButton("知道了", null).setNeutralButton("本应用系统设置", (d, w) -> openAppSettings()).show();
     }
     private void forceSettings() {
         PowerManager power = getSystemService(PowerManager.class);
         String battery = power.isIgnoringBatteryOptimizations(getPackageName()) ? "已允许" : "待设置";
         String screen = Build.VERSION.SDK_INT < 34 || AlertNotifier.manager(this).canUseFullScreenIntent() ? "已允许" : "待设置";
-        String[] options = {"后台启动 / 电池优化（" + battery + "）", "锁屏全屏提醒（" + screen + "）", "检查声音与勿扰：允许闹钟", "自启动、后台运行与应用权限", "相机权限：用于可选闪光灯"};
+        String overlay = Settings.canDrawOverlays(this) ? "已允许" : "待设置";
+        String[] options = {"后台启动 / 电池优化（" + battery + "）", "锁屏全屏提醒（" + screen + "）", "检查声音与勿扰：允许闹钟", "自启动、后台运行与应用权限", "相机权限：用于可选闪光灯", "悬浮停止按钮（" + overlay + "）", "强制提醒通知：横幅、锁屏与展开按钮"};
         new AlertDialog.Builder(this).setTitle("强制提醒设置")
             .setItems(options, (dialog, which) -> {
                 try {
@@ -163,9 +174,22 @@ public final class MainActivity extends Activity {
                     else if (which == 1 && Build.VERSION.SDK_INT >= 34) startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:" + getPackageName())));
                     else if (which == 2) startActivity(new Intent(Settings.ACTION_SOUND_SETTINGS));
                     else if (which == 4) requestPermissions(new String[]{Manifest.permission.CAMERA}, 201);
+                    else if (which == 5) requestOverlay();
+                    else if (which == 6) {
+                        AlarmService.ensureChannel(this);
+                        startActivity(new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()).putExtra(Settings.EXTRA_CHANNEL_ID, AlarmService.CHANNEL));
+                    }
                     else openAppSettings();
                 } catch (Exception error) { openAppSettings(); }
             }).setPositiveButton("完成", null).show();
+    }
+    private void requestOverlay() {
+        new AlertDialog.Builder(this).setTitle("允许悬浮停止按钮")
+            .setMessage("为解决亮屏响铃却没有关闭入口的问题，强制提醒期间可在其他应用上方显示“停止提醒”和“停止并打开短信”。结束提醒后立即移除；不读取屏幕或短信正文。\n\n请在系统设置中允许“显示在其他应用上层”或“悬浮窗”。锁屏全屏提醒仍需单独授权，部分系统页面也可能隐藏悬浮窗。")
+            .setPositiveButton("去授权", (d, w) -> {
+                try { startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); }
+                catch (RuntimeException error) { openAppSettings(); }
+            }).setNegativeButton("暂不", null).show();
     }
 }
 

@@ -1,6 +1,6 @@
 # 隐私与权限说明
 
-适用版本：SmsTone 0.3.0。
+适用版本：SmsTone 0.3.1。
 
 ## 数据处理
 
@@ -18,6 +18,7 @@
 | RECEIVE_SMS | 接收新普通 SMS 事件，按来源号码匹配 |
 | POST_NOTIFICATIONS | 展示普通提醒及持续强提醒的停止入口 |
 | READ_MEDIA_AUDIO / READ_EXTERNAL_STORAGE（最高 Android 12） | 展示系统音频库；可拒绝，改用单文件选择 |
+| SYSTEM_ALERT_WINDOW（可选） | 强制提醒期间显示可直接点击的停止/打开短信悬浮按钮，结束后移除；不读取屏幕内容 |
 | CAMERA | 可选闪光，仅调用 torch 接口，不启动拍照或录像 |
 | FOREGROUND_SERVICE / FOREGROUND_SERVICE_MEDIA_PLAYBACK | 持续运行闹钟式音频提醒 |
 | MODIFY_AUDIO_SETTINGS | 强提醒时提高闹钟音量，结束后恢复 |
@@ -26,7 +27,7 @@
 | REQUEST_IGNORE_BATTERY_OPTIMIZATIONS | 由用户选择允许后台运行 |
 | RECEIVE_BOOT_COMPLETED | 重启解锁后恢复之前因异常退出未恢复的音量，不重新响铃 |
 
-可在手机系统设置中撤销权限。短信权限撤销后无法匹配新短信；通知被关闭时本工具不启动强提醒，避免缺少可见停止入口；音频库权限拒绝后仍可取消或选取单个文件；相机权限拒绝后无法闪光。
+可在手机系统设置中撤销权限。短信权限撤销后无法匹配新短信；通知被关闭时本工具不启动强提醒，避免缺少可见停止入口；音频库权限拒绝后仍可取消或选取单个文件；相机权限拒绝后无法闪光。未允许悬浮窗时无法显示悬浮控制，可展开通知或打开应用首页停止；全屏提醒权限与悬浮权限相互独立。
 
 ## 删除数据
 
@@ -38,8 +39,8 @@
 - 短信来源匹配：`SmsReceiver.java`、`GroupNumbers.java`、`NumberMatcher.java`
 - 本地规则：`RuleStore.java`
 - 音频导入与提供：`SoundFiles.java`、`SoundProvider.java`
+- 悬浮控制：`AlarmControls.java`
 - 提醒与音量恢复：`AlarmService.java`、`AlarmActionReceiver.java`
 - 默认短信跳转：`SmsApps.java`
 
 上述 Java 文件位于 `app/src/main/java/cn/local/smstone/`。
-

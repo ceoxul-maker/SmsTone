@@ -28,7 +28,7 @@ function Run-Checked([string]$Exe, [string[]]$Arguments) {
 $compiledRes = Join-Path $buildDir 'resources.zip'
 $unsignedApk = Join-Path $buildDir 'unsigned.apk'
 $alignedApk = Join-Path $buildDir 'aligned.apk'
-$finalApk = Join-Path $buildDir 'SmsTone-0.3.0.apk'
+$finalApk = Join-Path $buildDir 'SmsTone-0.3.1.apk'
 Run-Checked (Join-Path $buildTools 'aapt2.exe') @('compile','--dir',(Join-Path $stageRoot 'app\src\main\res'),'-o',$compiledRes)
 Run-Checked (Join-Path $buildTools 'aapt2.exe') @('link','-I',$androidJar,'--manifest',(Join-Path $stageRoot 'app\src\main\AndroidManifest.xml'),'--java',$generatedDir,'-o',$unsignedApk,$compiledRes)
 $sourceFiles = @((Get-ChildItem -LiteralPath (Join-Path $stageRoot 'app\src\main\java') -Filter '*.java' -Recurse).FullName) + @((Get-ChildItem -LiteralPath $generatedDir -Filter '*.java' -Recurse).FullName)
@@ -50,9 +50,8 @@ Run-Checked (Join-Path $JavaHome 'bin\java.exe') @('-jar',(Join-Path $buildTools
 Run-Checked (Join-Path $JavaHome 'bin\java.exe') @('-jar',(Join-Path $buildTools 'lib\apksigner.jar'),'verify','--verbose',$finalApk)
 Run-Checked (Join-Path $buildTools 'zipalign.exe') @('-c','4',$finalApk)
 $hash = (Get-FileHash -LiteralPath $finalApk -Algorithm SHA256).Hash.ToLowerInvariant()
-Set-Content -LiteralPath (Join-Path $outputDir 'SHA256-0.3.0.txt') -Value "$hash  SmsTone-0.3.0.apk" -Encoding ascii
-Copy-Item -LiteralPath $finalApk -Destination (Join-Path $outputDir 'SmsTone-0.3.0.apk') -Force
-Write-Output ('APK ready: ' + (Join-Path $outputDir 'SmsTone-0.3.0.apk'))
+Set-Content -LiteralPath (Join-Path $outputDir 'SHA256-0.3.1.txt') -Value "$hash  SmsTone-0.3.1.apk" -Encoding ascii
+Copy-Item -LiteralPath $finalApk -Destination (Join-Path $outputDir 'SmsTone-0.3.1.apk') -Force
+Write-Output ('APK ready: ' + (Join-Path $outputDir 'SmsTone-0.3.1.apk'))
 Write-Output "Build staging: $stageRoot"
 Write-Output "SHA256: $hash"
-

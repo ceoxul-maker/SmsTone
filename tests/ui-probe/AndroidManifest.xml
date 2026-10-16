@@ -1,0 +1,1 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cn.local.smstone.probe"><uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34"/><application android:label="SmsTone UI test probe"/><instrumentation android:name=".UiProbe" android:targetPackage="cn.local.smstone.probe"/></manifest>

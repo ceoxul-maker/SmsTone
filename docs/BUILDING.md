@@ -24,14 +24,14 @@ Android-build-tools/
 
 ## 产物和签名
 
-- `dist/SmsTone-0.3.0.apk`
-- `dist/SHA256-0.3.0.txt`
+- `dist/SmsTone-0.3.1.apk`
+- `dist/SHA256-0.3.1.txt`
 
 首次构建会在本机 `signing/` 生成随机密码和 PKCS12 签名密钥，后续构建复用。签名密钥、密码、构建缓存和测试日志均被 Git 排除，不属于源码发布内容。请自行妥善备份密钥，勿上传 GitHub。
 
 自己构建的签名与本仓库 Release 安装包不同，不能覆盖安装官方发布包。需要同一签名才能保留数据覆盖升级。
 
-包名 `cn.local.smstone`，versionName `0.3.0`，versionCode `3`，最低 API 26，compile API 35，target API 34。
+包名 `cn.local.smstone`，versionName `0.3.1`，versionCode `4`，最低 API 26，compile API 35，target API 34。
 
 当前侧载测试包使用 target 34。在本次 Android 15 测试镜像中，target 35 的相同 mediaPlayback 前台服务实现即使已经运行，音频焦点请求仍遭拒绝；target 34 已验证成功取得临时焦点并循环播放。这不是普遍兼容性结论，也不代表满足应用商店上架政策。手机端实现未使用隐藏 API、root 或系统签名权限。
 
@@ -55,7 +55,7 @@ foreach ($test in 'NumberMatcherTest','GroupNumbersTest','AudioFiltersTest') {
 
 `tests/AndroidSmokeTools.ps1` 是原开发机的模拟器辅助函数，运行前需按自己的环境调整 ADB 路径和设备序列号；它不是无人值守的完整端到端测试套件。
 
-## 0.3.0 已验证范围
+## 0.3.1 已验证范围
 
 Android 15 AOSP x86_64 模拟器：
 
@@ -70,3 +70,18 @@ Android 15 AOSP x86_64 模拟器：
 - APK v2/v3 签名及 ZIP 对齐检查通过。
 
 尚未完成各品牌真机的后台保活、真实振幅、手电筒限制及运营商短信/验证码兼容验证。安装后应先试听，再用真实短信测试。
+
+## 0.3.1 提醒入口回归
+
+`AlarmVisibilitySmoke.ps1` 仅允许已 root 的一次性 AOSP 模拟器，**`-Prepare` 会替换测试实例规则**。手机端应用不需要也不使用 root。先调整 `AndroidSmokeTools.ps1` 中的工具路径和模拟器序列号；与发布构建共用本机签名密钥，但密钥不进入源码或测试 APK。
+
+```powershell
+.\tests\BuildUiProbe.ps1
+.\tests\AlarmVisibilitySmoke.ps1 -Prepare
+.\tests\AlarmVisibilitySmoke.ps1 -Action OpenSms
+.\tests\SystemSoundPickerSmoke.ps1
+```
+
+UI probe 是单独测试进程，用 Android 的 UiAutomation 读取非焦点悬浮窗并点击按钮，不进入发布 APK。测试通过真实模拟 SMS 触发应用接收与服务代码，在 FSI 被拒绝、常规 heads-up 关闭且悬浮权限允许的条件下检查可见双按钮、停止效果、恢复音量和默认短信跳转。0.3.0 在此场景实际失败，0.3.1 通过。该受控场景模拟系统不展示常规弹出路径，不能据此断言荣耀固件的具体拦截原因。
+
+另已验证：不授权悬浮窗时，展开通知的“停止并打开短信”可结束提醒、恢复音量并进入默认短信应用；FSI 获授权且锁屏时仍进入完整提醒页。系统铃声选择、取消、返回均实测原选择保留，仅确定并保存后应用新声音；滚动铃声列表时确认栏保持可见。

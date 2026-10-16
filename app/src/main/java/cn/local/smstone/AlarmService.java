@@ -45,6 +45,7 @@ public final class AlarmService extends Service {
     private boolean triedFallback;
     private boolean stopping;
     private String warnings = "";
+    private AlarmControls controls;
     private int focusAttempts;
     private final Runnable startPlayback = new Runnable() {
         @Override public void run() {
@@ -102,13 +103,26 @@ public final class AlarmService extends Service {
         PendingIntent open = openIntent(this, rule, false);
         PendingIntent stop = PendingIntent.getBroadcast(this, 61,
             new Intent(this, AlarmActionReceiver.class).setAction("cn.local.smstone.STOP_ALARM"), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent openSms = PendingIntent.getActivity(this, 62,
+            new Intent(this, AlarmActivity.class).putExtra("stopAndOpenSms", true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification.Action stopAction = new Notification.Action.Builder(null, "停止提醒", stop).build();
+        Notification.Action smsAction = new Notification.Action.Builder(null, "停止并打开短信", openSms).build();
+        Notification publicVersion = new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("短信强制提醒").setContentText("循环播放中；展开可停止或打开短信")
+            .setContentIntent(open).setOngoing(true).setCategory(Notification.CATEGORY_ALARM)
+            .addAction(stopAction).addAction(smsAction).build();
         Notification.Builder builder = new Notification.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(rule.displayName() + " · 强制提醒")
             .setContentText(status.isEmpty() ? "最大闹钟音量循环播放，点“停止全部提醒”关闭" : status)
             .setContentIntent(open).setOngoing(true).setCategory(Notification.CATEGORY_ALARM)
-            .setVisibility(Notification.VISIBILITY_PRIVATE).setOnlyAlertOnce(true)
-            .addAction(new Notification.Action.Builder(null, "停止全部提醒", stop).build());
-        if (Build.VERSION.SDK_INT < 34 || AlertNotifier.manager(this).canUseFullScreenIntent()) builder.setFullScreenIntent(open, true);
+            .setStyle(new Notification.BigTextStyle().bigText("循环提醒中，请手动停止。展开通知可选“停止提醒”或“停止并打开短信”。\n" + status))
+            .setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(publicVersion).setOnlyAlertOnce(true)
+            .addAction(stopAction).addAction(smsAction)
+            // Keep the intent when FSI is denied: Android then supplies its heads-up fallback.
+            .setFullScreenIntent(open, true);
+        if (Build.VERSION.SDK_INT >= 31) builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
         return builder.build();
     }
     @Override public void onCreate() {
@@ -116,6 +130,7 @@ public final class AlarmService extends Service {
         audio = getSystemService(AudioManager.class);
         vibrator = getSystemService(Vibrator.class);
         camera = getSystemService(CameraManager.class);
+        controls = new AlarmControls(this);
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
@@ -134,6 +149,7 @@ public final class AlarmService extends Service {
             else startForeground(NOTIFICATION_ID, notification(rule));
             running = true;
             if (!same) beginAlarm(rule);
+            if (!controls.show()) warning("悬浮停止按钮未显示；可下拉展开通知，或打开本应用停止。请在强制提醒设置中允许悬浮控制");
         } catch (RuntimeException error) {
             new RuleStore(this).recordResult("强制提醒启动失败，请检查后台和通知权限");
             stopSelf();
@@ -250,6 +266,7 @@ public final class AlarmService extends Service {
         } catch (RuntimeException ignored) { /* Retry on next launch rather than discarding the journal. */ }
     }
     @Override public void onDestroy() {
+        if (controls != null) controls.remove();
         stopEffects(); running = false; activeTitle = ""; activeId = "";
         restorePendingVolume(this);
         stopForeground(STOP_FOREGROUND_REMOVE);

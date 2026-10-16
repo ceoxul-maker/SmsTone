@@ -26,6 +26,7 @@ public final class AlarmActivity extends Activity {
     };
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if (openSmsIfRequested(getIntent())) return;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         LinearLayout root = Ui.screen(this);
         Ui.add(root, Ui.text(this, "SMS TONE  /  强制提醒", 12, Ui.GREEN, true), 18);
@@ -36,7 +37,15 @@ public final class AlarmActivity extends Activity {
         Ui.add(root, Ui.text(this, "停止只结束当前提醒；新的匹配短信仍会再次触发。", 13, Ui.MUTED, false), 16);
         manualStartIfRequested(getIntent());
     }
-    @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); manualStartIfRequested(intent); }
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent); setIntent(intent);
+        if (!openSmsIfRequested(intent)) manualStartIfRequested(intent);
+    }
+    private boolean openSmsIfRequested(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra("stopAndOpenSms", false)) return false;
+        intent.removeExtra("stopAndOpenSms");
+        SmsApps.openDefault(this); finish(); return true;
+    }
     private void manualStartIfRequested(Intent intent) {
         if (intent != null && intent.getBooleanExtra("manualStart", false)) {
             intent.putExtra("manualStart", false);
@@ -49,7 +58,7 @@ public final class AlarmActivity extends Activity {
         AlarmService.restorePendingVolume(this);
         finish();
     }
-    @Override public void onResume() { super.onResume(); handler.post(refresh); }
+    @Override public void onResume() { super.onResume(); if (!isFinishing()) handler.post(refresh); }
     @Override public void onPause() { handler.removeCallbacks(refresh); super.onPause(); }
     @Override public void onBackPressed() { stopAndClose(); }
 }
