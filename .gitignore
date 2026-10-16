@@ -1,0 +1,13 @@
+/build/
+/dist/
+/signing/
+/test-output/
+/local.properties
+*.iml
+.idea/
+*.p12
+*.jks
+*.keystore
+password.txt
+*.apk
+*.aab
